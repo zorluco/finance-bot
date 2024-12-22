@@ -1,42 +1,42 @@
-import asyncio
 from aiogram import Bot, Dispatcher, types
+import logging
+import asyncio
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# تنظیمات اصلی
+# تنظیمات لاگ‌ها برای بررسی مشکلات
+logging.basicConfig(level=logging.INFO)
+
+# توکن ربات تلگرام خود را اینجا وارد کنید
 API_TOKEN = '7800792594:AAFq17u9oVnP-p3N0ksLPI-tzFPxrs4uDoU'
-GROUP_CHAT_ID = -4642492016  # آی‌دی گروه واحد مالی
 
+# آیدی گروه خود را اینجا وارد کنید
+GROUP_ID = '-4642492016'
+
+# ایجاد شی Bot
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
 
-# حافظه موقت برای ذخیره اطلاعات کاربران
-user_data = {}
+# استفاده از MemoryStorage برای ذخیره‌سازی داده‌ها
+storage = MemoryStorage()
 
-# منوی اصلی
-def main_menu():
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📤 رسیدهای پرداختی", callback_data="payment_receipt")],
-        [InlineKeyboardButton(text="📥 رسیدهای دریافت", callback_data="receive_receipt")],
-        [InlineKeyboardButton(text="💰 دریافتی‌ها از مشتریان", callback_data="customer_receipt")]
-    ])
-    return keyboard
+# ایجاد Dispatcher بدون ارسال bot
+dp = Dispatcher(storage=storage)
 
-# هندلر برای فرمان /start
+# دستور /start برای خوشامدگویی به کاربر
 @dp.message(Command("start"))
-async def start_handler(message: types.Message):
-    await message.answer("سلام! لطفاً بخش مورد نظر خود را انتخاب کنید:", reply_markup=main_menu())
+async def cmd_start(message: types.Message):
+    await message.reply("سلام! ربات شما آماده است. برای ارسال پیام به گروه، فقط اینجا پیام ارسال کنید.")
 
-# هندلر برای کلیک روی دکمه‌ها
-@dp.callback_query()
-async def handle_menu(call: types.CallbackQuery):
-    user_id = call.from_user.id
-    if call.data == "payment_receipt":
-        user_data[user_id] = {'step': 1, 'type': 'payment'}
-        await call.message.edit_text("لطفاً عکس‌های رسید پرداختی خود را ارسال کنید.")
-    elif call.data == "receive_receipt":
-        user_data[user_id] = {'step': 1, 'type': 'receive'}
-        await call.message.edit_text("لطفاً عکس‌های رسید دریافت خود را ارسال کنید.")
-    elif call.data == "customer_receipt":
-        user_data[user_id] = {'step': 1, 'type': 'customer'}
-        await c
+# ارسال پیام به گروه زمانی که کاربر پیامی ارسال می‌کند
+@dp.message()
+async def forward_message_to_group(message: types.Message):
+    # ارسال پیام به گروه
+    await bot.send_message(GROUP_ID, message.text)
+
+# راه اندازی ربات با asyncio
+async def on_start():
+    # storage را هنگام start_polling به Dispatcher ارسال می‌کنیم
+    await dp.start_polling(bot)
+
+if __name__ == '__main__':
+    asyncio.run(on_start())
